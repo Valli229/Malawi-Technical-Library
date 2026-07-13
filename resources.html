@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Browse real learning resources saved in the Malawi Technical Library.">
+  <title>Resources | Malawi Technical Library</title>
+  <link rel="stylesheet" href="../assets/css/styles.css">
+</head>
+<body>
+<header class="site-header">
+  <div class="container navbar">
+  <a class="brand" href="../index.html">
+    <span class="brand-mark">MT</span>
+    <span>Malawi Technical Library<small>Learn. Practise. Succeed.</small></span>
+  </a>
+  <nav class="nav-links" aria-label="Main navigation">
+    <a href="../index.html">Home</a>
+    <a href="courses.html">Courses</a>
+    <a class="active" href="resources.html">Resources</a>
+    <a href="upload.html">Upload</a>
+    <a href="about.html">About</a>
+  </nav>
+  <div class="nav-actions">
+    <a class="btn btn-primary" href="upload.html">Share Resource</a>
+    <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false">☰</button>
+  </div>
+</div></header>
+<main>
+  <section class="page-hero">
+    <div class="container">
+      <span class="eyebrow">Digital library</span>
+      <h1>Books, notes and past papers</h1>
+      <p class="muted">Search, preview and download documents that have actually been added to the library.</p>
+    </div>
+  </section>
+  <section class="section">
+    <div class="container">
+      <div class="storage-notice">Documents are currently stored in this browser. They remain available on this device, but a cloud database will be required before different visitors can share one public library.</div>
+      <div class="resources-toolbar">
+        <input data-resource-search type="search" placeholder="Search resource titles or subjects..." aria-label="Search resources">
+        <select data-course-filter aria-label="Filter by course">
+          <option value="all">All courses</option>
+          <option value="information-and-communication-technology">ICT</option>
+          <option value="general-fitting">General Fitting</option>
+          <option value="electrical-installation">Electrical Installation</option>
+          <option value="automobile-mechanics">Automobile Mechanics</option>
+          <option value="welding-and-fabrication">Welding & Fabrication</option>
+          <option value="carpentry-and-joinery">Carpentry & Joinery</option>
+          <option value="fashion-design">Fashion Design</option>
+          <option value="bricklaying">Bricklaying</option>
+          <option value="plumbing">Plumbing</option>
+          <option value="refrigeration-and-air-conditioning">Refrigeration & Air Conditioning</option>
+        </select>
+      <select data-type-filter aria-label="Filter by resource type">
+        <option value="all">All types</option>
+        <option value="book">Books</option>
+        <option value="notes">Notes</option>
+        <option value="past-paper">Past papers</option>
+        <option value="module">Modules</option>
+        <option value="practical-guide">Practical guides</option>
+        <option value="syllabus">Syllabuses</option>
+      </select>
+    </div>
+    <div class="card-grid" data-library-grid></div>
+    <div class="empty-state" data-empty-state>Loading library...</div>
+  </div>
+</section>
+</main>
+<footer class="site-footer">
+  <div class="container">
+    <div class="footer-bottom">
+      © <span data-year>
+      </span> Malawi Technical Library.
+    </div>
+  </div>
+</footer>
+<script src="../assets/js/main.js"></script>
+</body>
+</html>
