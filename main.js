@@ -1,5 +1,30 @@
 const menuToggle = document.querySelector('.menu-toggle');
 const navLinks = document.querySelector('.nav-links');
+const navActions = document.querySelector('.nav-actions');
+
+// On phones and tablets the desktop action buttons are hidden to protect the
+// header layout. Copy those actions into the hamburger menu so guests can still
+// reach Log in/Register and signed-in users can access their account controls.
+if (navLinks && navActions) {
+  const mobileActions = document.createElement('div');
+  mobileActions.className = 'mobile-nav-actions';
+
+  [...navActions.children].forEach((item) => {
+    if (item.classList.contains('menu-toggle')) return;
+    mobileActions.appendChild(item.cloneNode(true));
+  });
+
+  if (!mobileActions.querySelector('a[href="register.html"]')) {
+    const registerLink = document.createElement('a');
+    registerLink.className = 'btn btn-outline';
+    registerLink.href = 'register.html';
+    registerLink.textContent = 'Register';
+    registerLink.setAttribute('data-guest-only', '');
+    mobileActions.appendChild(registerLink);
+  }
+
+  navLinks.appendChild(mobileActions);
+}
 
 if (menuToggle && navLinks) {
   menuToggle.addEventListener('click', () => {
