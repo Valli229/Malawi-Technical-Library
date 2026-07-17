@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>About | Malawi Technical Library</title>
+        <link rel="stylesheet" href="styles.css">
+    </head>
+    <body>
+        <header class="site-header">
+            <div class="container navbar">
+                <a class="brand" href="index.html">
+                    <span class="brand-mark">MT</span>
+                    <span>Malawi Technical Library<small>Learn. Practise. Succeed.</small></span>
+                </a>
+                <nav class="nav-links">
+                    <a href="index.html">Home</a>
+                    <a href="courses.html">Courses</a>
+                    <a href="resources.html">Resources</a>
+                    <a data-user-only hidden href="upload.html">Upload</a>
+                    <a class="active" href="about.html">About</a>
+                </nav>
+                <div class="nav-actions">
+                    <a class="btn btn-primary" href="resources.html">Browse Library</a>
+                    <a class="btn btn-outline" data-guest-only href="login.html">Log in</a><span class="account-chip" data-user-only hidden><span data-user-name></span><button class="btn btn-outline" type="button" data-logout>Log out</button></span><button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false">☰</button>
+                </div>
+            </div>
+        </header>
+        <main>
+            <section class="page-hero">
+                <div class="container">
+                    <span class="eyebrow">About the project</span>
+                    <h1>A digital library for technical education</h1>
+                    <p class="muted">The goal is to make useful study materials easier to find for technical college students throughout Malawi.</p>
+                </div>
+            </section>
+            <section class="section">
+                <div class="container content-grid">
+                    <div class="info-card">
+                        <h2>Our purpose</h2>
+                        <p>Malawi Technical Library organises books, notes, pamphlets, modules, practical guides and past papers in one accessible place.</p>
+                    </div>
+                    <div class="info-card">
+                        <h2>Copyright approach</h2>
+                        <p>Commercial books should not be uploaded without permission. The platform should prioritise original notes, public resources, authorised papers and open educational materials.</p>
+                        <p class="muted">A reporting and removal process should be added before public launch.</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+        <footer class="site-footer">
+            <div class="container">
+                <div class="footer-bottom">
+                    © <span data-year></span> Malawi Technical Library.
+                </div>
+            </div>
+        </footer>
+        <script src="main.js"></script>
+    <script type="module" src="auth-ui.js"></script>
+    
+</body>
+</html>
+

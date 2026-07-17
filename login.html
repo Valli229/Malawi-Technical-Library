@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width,initial-scale=1">
+        <title>Log in | Malawi Technical Library</title>
+        <link rel="stylesheet" href="styles.css">
+    </head>
+    <body>
+<header class="site-header">
+    <div class="container navbar">
+        <a class="brand" href="index.html">
+            <span class="brand-mark">MT</span>
+            <span>Malawi Technical Library<small>Learn. Practise. Succeed.</small></span>
+        </a>
+        <nav class="nav-links">
+            <a href="index.html">Home</a>
+            <a href="courses.html">Courses</a>
+            <a href="resources.html">Resources</a>
+            <a href="about.html">About</a>
+        </nav>
+        <div class="nav-actions">
+            <a class="btn btn-outline" href="register.html">Register</a>
+        </div>
+    </div>
+</header>
+<main class="auth-page">
+    <section class="auth-card">
+        <span class="eyebrow">Welcome back</span>
+        <h1>Log in</h1>
+        <p class="muted">Use your Malawi Technical Library account.</p>
+        <form id="loginForm" class="auth-form">
+            <label>Email
+                <input id="email" type="email" required autocomplete="email" placeholder="Enter email">
+            </label>
+            <label>Password
+                <div class="password-row">
+                    <input id="password" type="password" required autocomplete="current-password" placeholder="Enter password">
+                    <button type="button" data-toggle-password>Show</button>
+                </div>
+            </label>
+            <p class="form-error" id="formError" hidden></p>
+            <button class="btn btn-primary auth-submit" type="submit">Log in</button>
+        </form>
+        <p class="auth-switch">Don't have an account? <a href="register.html">Register here</a></p>
+    </section>
+</main>
+<script type="module">import { loginAccount, configured } from './auth.js';const f=document
+    .querySelector('#loginForm'),e=document
+    .querySelector('#formError'),p=document
+    .querySelector('#password');document
+    .querySelector('[data-toggle-password]')
+    .onclick=()=>{p.type=p.type==='password'?'text':'password'};f
+    .onsubmit=async ev=>{ev
+        .preventDefault();e.hidden=true;const b=f
+        .querySelector('button[type=submit]');b
+        .disabled=true;b.textContent='Logging in...';try{await loginAccount(document.querySelector('#email')
+        .value.trim(),p.value);const q=new URLSearchParams(location.search);location.href=q
+        .get('next')||'resources.html'}catch(err){e.textContent=configured?(err.code==='auth/invalid-credential'?'Incorrect email or password.':err.message):'Firebase is not configured yet. Open firebase-config.js and add your project details.';e.hidden=false}finally{b.disabled=false;b.textContent='Log in'}};</script>
+    </body>
+    </html>
