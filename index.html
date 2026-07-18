@@ -17,6 +17,15 @@
         <a href="resources.html">Resources</a>
         <a data-user-only hidden href="upload.html">Upload</a>
         <a href="about.html">About</a>
+      
+        <div class="mobile-auth-links" aria-label="Account actions">
+          <a class="mobile-auth-link" data-guest-only href="login.html">Log in</a>
+          <a class="mobile-auth-link mobile-auth-register" data-guest-only href="register.html">Register</a>
+          <div class="mobile-user-account" data-user-only hidden>
+            <span class="mobile-user-name" data-user-name></span>
+            <button class="mobile-logout" type="button" data-logout>Log out</button>
+          </div>
+        </div>
       </nav>
       <div class="nav-actions"><a class="btn btn-primary" href="resources.html">Browse Library</a><a class="btn btn-outline" data-guest-only href="login.html">Log in</a><span class="account-chip" data-user-only hidden><span data-user-name></span><button class="btn btn-outline" type="button" data-logout>Log out</button></span><button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false">☰</button></div>
     </div>
@@ -33,7 +42,7 @@
             <input type="search" aria-label="Search resources" placeholder="Search by subject, course or document title...">
             <button class="btn btn-primary" type="submit">Search Resources</button>
           </form>
-          <div class="hero-actions"><a class="btn btn-secondary" href="courses.html">Explore Courses</a><a class="btn btn-outline" data-user-only hidden href="upload.html">Share a Resource</a></div>
+          <div class="hero-actions"><a class="btn btn-secondary" href="courses.html">Explore Courses</a><a class="btn btn-outline hero-auth-button" data-guest-only href="login.html">Log in/Register</a><a class="btn btn-outline" data-user-only hidden href="upload.html">Share a Resource</a></div>
         </div>
         <aside class="hero-card">
           <span class="eyebrow" style="color:#f4cb72">Built for student success</span>
