@@ -231,42 +231,72 @@ body.modal-open { overflow:hidden; }
 @media (max-width: 940px) and (min-width: 651px) { .account-chip .btn { display:inline-flex !important; } }
 
 
-/* Mobile authentication and account actions inside the hamburger menu.
-   Desktop navigation remains unchanged. */
-.mobile-nav-actions { display: none; }
+/* Mobile account actions and home guest call-to-action */
+.mobile-auth-links { display: none; }
+.hero-auth-button { white-space: nowrap; }
 
 @media (max-width: 940px) {
-  .nav-links .mobile-nav-actions {
-    display: flex;
-    flex-direction: column;
+  .mobile-auth-links {
+    display: grid;
     gap: 10px;
-    width: 100%;
-    margin-top: 6px;
+    margin-top: 8px;
     padding-top: 14px;
     border-top: 1px solid var(--border);
   }
 
-  .mobile-nav-actions > .btn,
-  .mobile-nav-actions .account-chip,
-  .mobile-nav-actions .account-chip .btn {
+  .mobile-auth-link,
+  .mobile-logout {
     width: 100%;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: #fff;
+    color: var(--primary-dark);
+    font: inherit;
+    font-weight: 800;
+    cursor: pointer;
   }
 
-  .mobile-nav-actions .btn {
-    display: inline-flex !important;
-    text-align: center;
+  .mobile-auth-register {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
   }
 
-  .mobile-nav-actions .account-chip {
-    max-width: none;
-    flex-direction: column;
-    align-items: stretch;
+  .mobile-user-account {
+    display: grid;
     gap: 10px;
   }
 
-  .mobile-nav-actions .account-chip [data-user-name] {
-    display: block;
+  .mobile-user-name {
     overflow-wrap: anywhere;
+    color: var(--muted);
+    font-size: .86rem;
     text-align: center;
+  }
+}
+
+@media (max-width: 650px) {
+  .hero-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+
+  .hero-actions .btn {
+    width: 100%;
+  }
+
+  .nav-links .mobile-auth-link {
+    border-bottom: 1px solid var(--border);
+    color: var(--primary-dark);
+  }
+
+  .nav-links .mobile-auth-register {
+    color: #fff;
   }
 }
