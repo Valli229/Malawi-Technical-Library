@@ -68,6 +68,11 @@ async function createFileUrl(resource) {
   throw new Error('This document does not have an available file.');
 }
 
+async function incrementDownloadCount(id) {
+  const cloud = await getCloudService();
+  return cloud.incrementResourceDownloadCount(id);
+}
+
 async function getResourceBlob(resource) {
   if (resource.file instanceof Blob) return resource.file;
   const url = await createFileUrl(resource);
@@ -91,6 +96,11 @@ function formatBytes(bytes) {
   const units = ['B', 'KB', 'MB', 'GB'];
   const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
   return `${(bytes / (1024 ** index)).toFixed(index === 0 ? 0 : 1)} ${units[index]}`;
+}
+
+function formatDownloadCount(value) {
+  const count = Number(value ?? 0);
+  return `📥 ${count} Download${count === 1 ? '' : 's'}`;
 }
 
 const heroSearchForm = document.querySelector('[data-hero-search-form]');
@@ -310,6 +320,7 @@ function renderResources() {
         <span class="tag">${formatBytes(resource.fileSize)}</span>
       </div>
       ${normalizedStatus(resource) === 'pending' ? `<div class="approval-status pending">Pending approval${resource.submittedByEmail ? ` · ${escapeHtml(resource.submittedByEmail)}` : ''}</div>` : ''}
+      <div class="resource-download-count">${escapeHtml(formatDownloadCount(resource.downloadCount))}</div>
       <div class="resource-actions">
         <button class="btn btn-outline" type="button" data-preview-id="${resource.id}">Preview</button>
         ${normalizedStatus(resource) === 'approved' ? `<button class="btn btn-primary" type="button" data-download-id="${resource.id}">Download</button>` : ''}
@@ -374,6 +385,16 @@ libraryGrid?.addEventListener('click', async (event) => {
     link.click();
     link.remove();
     if (url.startsWith('blob:')) setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+    // After starting the download, increment the counter in Firestore. If it fails, allow download to continue.
+    try {
+      await incrementDownloadCount(resource.id);
+      const newCount = Number(resource.downloadCount ?? 0) + 1;
+      resource.downloadCount = newCount;
+      renderResources();
+    } catch (error) {
+      console.error('Failed to update resource download count:', error);
+    }
   }
   if (approveButton) {
     if (document.documentElement.dataset.isAdmin !== 'true') {
