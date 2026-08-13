@@ -28,7 +28,15 @@ service cloud.firestore {
         && request.resource.data.submittedByUid == request.auth.uid
         && (request.resource.data.status == "pending" || isAdmin());
 
-      allow update, delete: if isAdmin();
+      allow update: if isAdmin() || (
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['downloadCount'])
+        && (
+          (resource.data.downloadCount != null && request.resource.data.downloadCount == resource.data.downloadCount + 1)
+          || (resource.data.downloadCount == null && request.resource.data.downloadCount == 1)
+        )
+      );
+
+      allow delete: if isAdmin();
     }
   }
 }
