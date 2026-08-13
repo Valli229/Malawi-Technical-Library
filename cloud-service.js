@@ -8,6 +8,15 @@ function requireSupabaseConfig() {
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !SUPABASE_BUCKET) {
     throw new Error('Supabase is not configured in supabase-config.js.');
   }
+
+  try {
+    const url = new URL(SUPABASE_URL);
+    if (!url.hostname.endsWith('supabase.co')) {
+      throw new Error('Invalid hostname');
+    }
+  } catch {
+    throw new Error('The Supabase project URL in supabase-config.js is invalid. Use the exact URL from your Supabase project settings.');
+  }
 }
 
 function safePathPart(value) {
@@ -132,6 +141,15 @@ function mapFirestoreDocument(document) {
   };
 }
 
+function normalizeResource(resource) {
+  const count = Number(resource.downloadCount ?? resource.downloads ?? 0);
+  return {
+    ...resource,
+    downloadCount: count,
+    downloads: count
+  };
+}
+
 export function uploadResourceFile(file, userId, onProgress = () => {}) {
   requireSupabaseConfig();
   const unique = `${Date.now()}-${crypto.randomUUID?.() || Math.random().toString(36).slice(2)}`;
@@ -196,6 +214,7 @@ export async function createResource(resource, callbacks = {}) {
           fields: toFirestoreFields({
             ...metadata,
             storagePath,
+            downloadCount: 0,
             createdAtMs,
             createdAt: new Date(createdAtMs).toISOString()
           })
@@ -204,7 +223,8 @@ export async function createResource(resource, callbacks = {}) {
       { requireAuth: true, timeout: 30000 }
     );
     callbacks.onStage?.('complete');
-    return mapFirestoreDocument(data);
+    // Initialize every newly uploaded resource with a download counter of zero in Firestore.
+    return normalizeResource(mapFirestoreDocument(data));
   } catch (error) {
     throw new Error(`The file uploaded, but its library record could not be saved: ${error.message}`);
   }
@@ -247,13 +267,13 @@ export async function fetchResources({ isAdmin = false, userId = '' } = {}) {
     resources = await runResourceQuery(resourceQuery(), true);
   } else {
     const approved = await runResourceQuery(resourceQuery(fieldEquals('status', 'approved')), false);
-    if (!userId) return approved.sort(sortNewest);
+    if (!userId) return approved.sort(sortNewest).map(normalizeResource);
     const mine = await runResourceQuery(resourceQuery(fieldEquals('submittedByUid', userId)), true);
     const merged = new Map();
     [...approved, ...mine].forEach((item) => merged.set(item.id, item));
     resources = [...merged.values()];
   }
-  return resources.sort(sortNewest);
+  return resources.sort(sortNewest).map(normalizeResource);
 }
 
 function sortNewest(a, b) {
@@ -273,15 +293,32 @@ export async function saveResource(resource) {
     },
     { requireAuth: true, timeout: 30000 }
   );
-  return mapFirestoreDocument(data);
+  return normalizeResource(mapFirestoreDocument(data));
 }
 
-export async function removeResourceRecord(id) {
+export async function incrementResourceDownloadCount(id) {
   if (!id) throw new Error('The resource ID is missing.');
+  const documentName = `projects/${firebaseConfig.projectId}/databases/default/documents/resources/${String(id)}`;
+  // Atomically increment the authoritative downloadCount field only.
   await firestoreRequest(
-    `${FIRESTORE_BASE}/resources/${encodeURIComponent(String(id))}`,
-    { method: 'DELETE' },
-    { requireAuth: true, timeout: 30000 }
+    `${FIRESTORE_BASE}:commit`,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        writes: [{
+          transform: {
+            document: documentName,
+            fieldTransforms: [
+              {
+                fieldPath: 'downloadCount',
+                increment: { integerValue: '1' }
+              }
+            ]
+          }
+        }]
+      })
+    },
+    { requireAuth: false, timeout: 30000 }
   );
 }
 
@@ -290,14 +327,23 @@ export async function getSignedResourceUrl(storagePath, expiresIn = 900) {
   if (!storagePath) throw new Error('This resource has no cloud file path.');
   const path = storagePath.split('/').map(encodeURIComponent).join('/');
   const endpoint = `${SUPABASE_URL}/storage/v1/object/sign/${encodeURIComponent(SUPABASE_BUCKET)}/${path}`;
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers: supabaseHeaders({ 'Content-Type': 'application/json' }),
-    body: JSON.stringify({ expiresIn })
-  });
-  if (!response.ok) await readError(response, 'A temporary file link could not be created.');
-  const data = await response.json();
-  const signedPath = data.signedURL || data.signedUrl || data.signed_url;
-  if (!signedPath) throw new Error('Supabase did not return a signed file link.');
-  return signedPath.startsWith('http') ? signedPath : `${SUPABASE_URL}/storage/v1${signedPath}`;
+
+  try {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: supabaseHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ expiresIn })
+    });
+    if (!response.ok) await readError(response, 'A temporary file link could not be created.');
+    const data = await response.json();
+    const signedPath = data.signedURL || data.signedUrl || data.signed_url;
+    if (!signedPath) throw new Error('Supabase did not return a signed file link.');
+    return signedPath.startsWith('http') ? signedPath : `${SUPABASE_URL}/storage/v1${signedPath}`;
+  } catch (error) {
+    const message = String(error?.message || error);
+    if (/Failed to fetch|ERR_NAME_NOT_RESOLVED|fetch/i.test(message) || /supabase/i.test(message)) {
+      throw new Error('The Supabase project URL or connection is invalid. Check the Supabase URL in supabase-config.js and make sure it matches your active project.');
+    }
+    throw error;
+  }
 }
