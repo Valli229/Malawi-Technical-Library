@@ -49,24 +49,25 @@ service cloud.firestore {
       // Everyone else, including anonymous visitors, can ONLY
       // increase downloadCount by exactly 1 on an approved resource.
       allow update: if isAdmin()
-        || (
-          resource.data.status == "approved"
-          && request.resource.data.diff(resource.data)
-              .affectedKeys()
-              .hasOnly(['downloadCount'])
-          && (
-            (
-              resource.data.keys().hasAll(['downloadCount'])
-              && request.resource.data.downloadCount
-                 == resource.data.downloadCount + 1
-            )
-            ||
-            (
-              !resource.data.keys().hasAll(['downloadCount'])
-              && request.resource.data.downloadCount == 1
-            )
-          )
-        );
+  || (
+    resource.data.status == "approved"
+    && request.resource.data.diff(resource.data)
+        .affectedKeys()
+        .hasOnly(['downloadCount'])
+    && (
+      (
+        resource.data.downloadCount is int
+        && request.resource.data.downloadCount is int
+        && request.resource.data.downloadCount
+           == resource.data.downloadCount + 1
+      )
+      ||
+      (
+        !resource.data.keys().hasAll(['downloadCount'])
+        && request.resource.data.downloadCount == 1
+      )
+    )
+  );
 
       allow delete: if isAdmin();
     }
