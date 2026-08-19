@@ -387,9 +387,9 @@ libraryGrid?.addEventListener('click', async (event) => {
     if (url.startsWith('blob:')) setTimeout(() => URL.revokeObjectURL(url), 1000);
     // After starting the download, increment the counter in Firestore. If it fails, allow download to continue.
     try {
-      await incrementDownloadCount(resource.id);
-      const newCount = Number(resource.downloadCount ?? 0) + 1;
+      const newCount = await incrementDownloadCount(resource.id);
       resource.downloadCount = newCount;
+      resource.downloads = newCount;
       renderResources();
     } catch (error) {
       console.error('Failed to update resource download count:', error);
