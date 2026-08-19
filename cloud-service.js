@@ -298,28 +298,87 @@ export async function saveResource(resource) {
 
 export async function incrementResourceDownloadCount(id) {
   if (!id) throw new Error('The resource ID is missing.');
-  const documentName = `projects/${firebaseConfig.projectId}/databases/default/documents/resources/${String(id)}`;
-  // Atomically increment the authoritative downloadCount field only.
+
+  const documentName =
+    `projects/${firebaseConfig.projectId}/databases/default/documents/resources/${String(id)}`;
+
+  const body = JSON.stringify({
+    writes: [{
+      transform: {
+        document: documentName,
+        fieldTransforms: [
+          {
+            fieldPath: 'downloadCount',
+            increment: {
+              integerValue: '1'
+            }
+          }
+        ]
+      }
+    }]
+  });
+
+  // If a user is signed in, firestoreRequest() automatically
+  // sends their Firebase ID token.
+  //
+  // If nobody is signed in, the request is sent without an
+  // Authorization header. Firestore rules explicitly allow
+  // anonymous visitors to increment downloadCount by exactly 1.
+
   await firestoreRequest(
     `${FIRESTORE_BASE}:commit`,
     {
       method: 'POST',
-      body: JSON.stringify({
-        writes: [{
-          transform: {
-            document: documentName,
-            fieldTransforms: [
-              {
-                fieldPath: 'downloadCount',
-                increment: { integerValue: '1' }
-              }
-            ]
-          }
-        }]
-      })
+      body
     },
-    { requireAuth: false, timeout: 30000 }
+    {
+      requireAuth: false,
+      timeout: 30000
+    }
   );
+}
+
+  try {
+    // Ensure an anonymous auth session exists for visitors so the request
+    // appears as an authenticated (but limited) user in Firestore rules.
+    try { await signInAnonymouslyIfNeeded(); } catch (e) { /* ignore */ }
+    console.debug('incrementResourceDownloadCount: attempting auth commit', { hasUser: !!auth?.currentUser, uid: auth?.currentUser?.uid });
+    await firestoreRequest(`${FIRESTORE_BASE}:commit`, { method: 'POST', body }, { requireAuth: false, timeout: 30000 });
+    console.debug('incrementResourceDownloadCount: auth commit succeeded');
+    return;
+  } catch (error) {
+    console.warn('incrementResourceDownloadCount: auth commit failed, will try API-key fallback', error?.message || error);
+    // Try the project's API key fallback so anonymous or signed-in non-admin
+    // users can increment the download counter.
+    try {
+      const endpoint = `${FIRESTORE_BASE}:commit?key=${encodeURIComponent(firebaseConfig.apiKey)}`;
+      console.debug('incrementResourceDownloadCount: attempting API-key commit', { endpoint });
+      const controller = new AbortController();
+      const timeout = 30000;
+      const timer = setTimeout(() => controller.abort(), timeout);
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body,
+        signal: controller.signal
+      });
+      clearTimeout(timer);
+      if (!response.ok) {
+        try {
+          await readError(response, 'Firestore rejected the API-key commit request.');
+        } catch (err) {
+          console.error('incrementResourceDownloadCount: API-key commit rejected', err?.message || err);
+          throw error;
+        }
+      }
+      console.debug('incrementResourceDownloadCount: API-key commit succeeded');
+      return;
+    } catch (err) {
+      // If the fallback also fails, log and rethrow the original error for debugging.
+      console.error('incrementResourceDownloadCount: API-key commit failed', err?.message || err);
+      throw error;
+    }
+  }
 }
 
 export async function getSignedResourceUrl(storagePath, expiresIn = 900) {
