@@ -8,48 +8,65 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return signedIn() &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "admin";
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "admin";
     }
 
     match /users/{userId} {
-      allow read: if signedIn() && (request.auth.uid == userId || isAdmin());
-      allow create: if signedIn() && request.auth.uid == userId;
-      allow update: if signedIn() && request.auth.uid == userId;
+
+      allow read: if signedIn()
+        && (request.auth.uid == userId || isAdmin());
+
+      allow create: if signedIn()
+        && request.auth.uid == userId;
+
+      allow update: if signedIn()
+        && request.auth.uid == userId;
+
       allow delete: if false;
     }
 
     match /resources/{resourceId} {
+
+      // Approved resources are publicly readable.
+      // Administrators can read everything.
+      // Users can read resources they submitted.
       allow read: if resource.data.status == "approved"
         || isAdmin()
         || (signedIn() && resource.data.submittedByUid == request.auth.uid);
 
+      // A signed-in user can create a resource belonging to themselves.
       allow create: if signedIn()
         && request.resource.data.submittedByUid == request.auth.uid
-        && (request.resource.data.status == "pending" || isAdmin());
-
-      // Administrators may update any fields. Non-admins (signed or anonymous)
-      // are only allowed to increment the `downloadCount` field on publicly
-      // visible (approved) resources. The rules validate that the only
-      // affected key is `downloadCount` and that the new value is exactly
-      // one greater than the previous value (or 1 when previously absent).
-      allow update: if isAdmin() || (
-        resource.data.status == "approved"
-        // Either the client sends a regular update where the new document
-        // snapshot is available for inspection (validate +1), OR the write
-        // is a transform-only write (e.g. an atomic `increment`) in which
-        // case `request.writeFields()` will list the affected fields.
         && (
-          (
-            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['downloadCount'])
-            && (
-              (resource.data.downloadCount != null && request.resource.data.downloadCount == resource.data.downloadCount + 1)
-              || (resource.data.downloadCount == null && request.resource.data.downloadCount == 1)
+          request.resource.data.status == "pending"
+          || isAdmin()
+        );
+
+      // Administrators can modify resources.
+      //
+      // Everyone else, including anonymous visitors, can ONLY
+      // increase downloadCount by exactly 1 on an approved resource.
+      allow update: if isAdmin()
+        || (
+          resource.data.status == "approved"
+          && request.resource.data.diff(resource.data)
+              .affectedKeys()
+              .hasOnly(['downloadCount'])
+          && (
+            (
+              resource.data.keys().hasAll(['downloadCount'])
+              && request.resource.data.downloadCount
+                 == resource.data.downloadCount + 1
+            )
+            ||
+            (
+              !resource.data.keys().hasAll(['downloadCount'])
+              && request.resource.data.downloadCount == 1
             )
           )
-          || request.writeFields().hasOnly(['downloadCount'])
-        )
-      );
+        );
 
       allow delete: if isAdmin();
     }
