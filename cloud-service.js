@@ -36,31 +36,49 @@ function supabaseHeaders(extra = {}) {
 
 async function readError(response, fallback) {
   let detail = '';
+
   try {
     const data = await response.json();
-    detail = data?.error?.message || data?.message || data?.error || data?.error_description || '';
+    detail =
+      data?.error?.message ||
+      data?.message ||
+      data?.error ||
+      data?.error_description ||
+      '';
   } catch {
     detail = await response.text().catch(() => '');
   }
+
   throw new Error(detail || fallback);
 }
 
 function withTimeout(promise, milliseconds, message) {
   let timer;
+
   return Promise.race([
     promise.finally(() => clearTimeout(timer)),
     new Promise((_, reject) => {
-      timer = setTimeout(() => reject(new Error(message)), milliseconds);
+      timer = setTimeout(
+        () => reject(new Error(message)),
+        milliseconds
+      );
     })
   ]);
 }
 
 async function firebaseToken(required = false) {
   const user = auth?.currentUser;
+
   if (!user) {
-    if (required) throw new Error('Your login session is not ready. Refresh the page, log in again, and retry.');
+    if (required) {
+      throw new Error(
+        'Your login session is not ready. Refresh the page, log in again, and retry.'
+      );
+    }
+
     return '';
   }
+
   return withTimeout(
     user.getIdToken(),
     15000,
@@ -68,73 +86,170 @@ async function firebaseToken(required = false) {
   );
 }
 
-async function firestoreRequest(url, options = {}, { requireAuth = false, timeout = 30000 } = {}) {
+async function firestoreRequest(
+  url,
+  options = {},
+  { requireAuth = false, timeout = 30000 } = {}
+) {
   const token = await firebaseToken(requireAuth);
+
   const headers = new Headers(options.headers || {});
   headers.set('Content-Type', 'application/json');
-  if (token) headers.set('Authorization', `Bearer ${token}`);
+
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeout);
+
   try {
-    const response = await fetch(url, { ...options, headers, signal: controller.signal });
+    const response = await fetch(url, {
+      ...options,
+      headers,
+      signal: controller.signal
+    });
+
     if (!response.ok) {
-      await readError(response, 'Firestore rejected the request. Check your Firestore rules and login session.');
+      await readError(
+        response,
+        'Firestore rejected the request. Check your Firestore rules and login session.'
+      );
     }
-    if (response.status === 204) return null;
+
+    if (response.status === 204) {
+      return null;
+    }
+
     const text = await response.text();
     return text ? JSON.parse(text) : null;
+
   } catch (error) {
     if (error?.name === 'AbortError') {
-      throw new Error(`Firestore did not respond within ${Math.round(timeout / 1000)} seconds. Check your internet connection.`);
+      throw new Error(
+        `Firestore did not respond within ${Math.round(timeout / 1000)} seconds. Check your internet connection.`
+      );
     }
+
     throw error;
+
   } finally {
     clearTimeout(timer);
   }
 }
 
 function toFirestoreValue(value) {
-  if (value === null || value === undefined) return { nullValue: null };
-  if (typeof value === 'string') return { stringValue: value };
-  if (typeof value === 'boolean') return { booleanValue: value };
+  if (value === null || value === undefined) {
+    return { nullValue: null };
+  }
+
+  if (typeof value === 'string') {
+    return { stringValue: value };
+  }
+
+  if (typeof value === 'boolean') {
+    return { booleanValue: value };
+  }
+
   if (typeof value === 'number') {
-    return Number.isInteger(value) ? { integerValue: String(value) } : { doubleValue: value };
+    return Number.isInteger(value)
+      ? { integerValue: String(value) }
+      : { doubleValue: value };
   }
-  if (value instanceof Date) return { timestampValue: value.toISOString() };
-  if (Array.isArray(value)) return { arrayValue: { values: value.map(toFirestoreValue) } };
+
+  if (value instanceof Date) {
+    return { timestampValue: value.toISOString() };
+  }
+
+  if (Array.isArray(value)) {
+    return {
+      arrayValue: {
+        values: value.map(toFirestoreValue)
+      }
+    };
+  }
+
   if (typeof value === 'object') {
-    return { mapValue: { fields: toFirestoreFields(value) } };
+    return {
+      mapValue: {
+        fields: toFirestoreFields(value)
+      }
+    };
   }
-  return { stringValue: String(value) };
+
+  return {
+    stringValue: String(value)
+  };
 }
 
 function toFirestoreFields(object) {
   return Object.fromEntries(
     Object.entries(object)
-      .filter(([, value]) => value !== undefined && typeof value !== 'function')
-      .map(([key, value]) => [key, toFirestoreValue(value)])
+      .filter(
+        ([, value]) =>
+          value !== undefined &&
+          typeof value !== 'function'
+      )
+      .map(([key, value]) => [
+        key,
+        toFirestoreValue(value)
+      ])
   );
 }
 
 function fromFirestoreValue(value = {}) {
-  if ('stringValue' in value) return value.stringValue;
-  if ('integerValue' in value) return Number(value.integerValue);
-  if ('doubleValue' in value) return Number(value.doubleValue);
-  if ('booleanValue' in value) return Boolean(value.booleanValue);
-  if ('timestampValue' in value) return value.timestampValue;
-  if ('nullValue' in value) return null;
-  if ('arrayValue' in value) return (value.arrayValue.values || []).map(fromFirestoreValue);
-  if ('mapValue' in value) return fromFirestoreFields(value.mapValue.fields || {});
+  if ('stringValue' in value) {
+    return value.stringValue;
+  }
+
+  if ('integerValue' in value) {
+    return Number(value.integerValue);
+  }
+
+  if ('doubleValue' in value) {
+    return Number(value.doubleValue);
+  }
+
+  if ('booleanValue' in value) {
+    return Boolean(value.booleanValue);
+  }
+
+  if ('timestampValue' in value) {
+    return value.timestampValue;
+  }
+
+  if ('nullValue' in value) {
+    return null;
+  }
+
+  if ('arrayValue' in value) {
+    return (value.arrayValue.values || [])
+      .map(fromFirestoreValue);
+  }
+
+  if ('mapValue' in value) {
+    return fromFirestoreFields(
+      value.mapValue.fields || {}
+    );
+  }
+
   return null;
 }
 
 function fromFirestoreFields(fields = {}) {
-  return Object.fromEntries(Object.entries(fields).map(([key, value]) => [key, fromFirestoreValue(value)]));
+  return Object.fromEntries(
+    Object.entries(fields).map(
+      ([key, value]) => [
+        key,
+        fromFirestoreValue(value)
+      ]
+    )
+  );
 }
 
 function mapFirestoreDocument(document) {
   const name = document?.name || '';
+
   return {
     id: name.split('/').pop(),
     ...fromFirestoreFields(document?.fields || {})
@@ -142,7 +257,12 @@ function mapFirestoreDocument(document) {
 }
 
 function normalizeResource(resource) {
-  const count = Number(resource.downloadCount ?? resource.downloads ?? 0);
+  const count = Number(
+    resource.downloadCount ??
+    resource.downloads ??
+    0
+  );
+
   return {
     ...resource,
     downloadCount: count,
@@ -150,62 +270,159 @@ function normalizeResource(resource) {
   };
 }
 
-export function uploadResourceFile(file, userId, onProgress = () => {}) {
+export function uploadResourceFile(
+  file,
+  userId,
+  onProgress = () => {}
+) {
   requireSupabaseConfig();
-  const unique = `${Date.now()}-${crypto.randomUUID?.() || Math.random().toString(36).slice(2)}`;
-  const storagePath = `${safePathPart(userId || 'user')}/${unique}-${safePathPart(file.name)}`;
-  const endpoint = `${SUPABASE_URL}/storage/v1/object/${encodeURIComponent(SUPABASE_BUCKET)}/${storagePath.split('/').map(encodeURIComponent).join('/')}`;
+
+  const unique =
+    `${Date.now()}-${crypto.randomUUID?.() || Math.random().toString(36).slice(2)}`;
+
+  const storagePath =
+    `${safePathPart(userId || 'user')}/${unique}-${safePathPart(file.name)}`;
+
+  const endpoint =
+    `${SUPABASE_URL}/storage/v1/object/${encodeURIComponent(SUPABASE_BUCKET)}/${storagePath
+      .split('/')
+      .map(encodeURIComponent)
+      .join('/')}`;
 
   return new Promise((resolve, reject) => {
     const request = new XMLHttpRequest();
+
     request.open('POST', endpoint, true);
     request.timeout = 90000;
-    request.setRequestHeader('apikey', SUPABASE_ANON_KEY);
-    request.setRequestHeader('Authorization', `Bearer ${SUPABASE_ANON_KEY}`);
-    request.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
-    request.setRequestHeader('x-upsert', 'false');
 
-    request.upload.addEventListener('progress', (event) => {
-      if (event.lengthComputable) {
-        onProgress(Math.max(1, Math.min(100, Math.round((event.loaded / event.total) * 100))));
-      }
-    });
+    request.setRequestHeader(
+      'apikey',
+      SUPABASE_ANON_KEY
+    );
 
-    request.addEventListener('load', () => {
-      if (request.status >= 200 && request.status < 300) {
-        onProgress(100);
-        resolve(storagePath);
-        return;
-      }
-      let message = 'The document could not be uploaded to cloud storage.';
-      try {
-        const data = JSON.parse(request.responseText || '{}');
-        message = data.message || data.error || message;
-      } catch {
-        if (request.responseText) message = request.responseText;
-      }
-      reject(new Error(message));
-    });
+    request.setRequestHeader(
+      'Authorization',
+      `Bearer ${SUPABASE_ANON_KEY}`
+    );
 
-    request.addEventListener('error', () => reject(new Error(
-      'The browser could not connect to Supabase Storage. Check your internet connection and try again.'
-    )));
-    request.addEventListener('timeout', () => reject(new Error(
-      'The file upload timed out after 90 seconds. Check your connection or try a smaller file.'
-    )));
-    request.addEventListener('abort', () => reject(new Error('The file upload was cancelled.')));
+    request.setRequestHeader(
+      'Content-Type',
+      file.type || 'application/octet-stream'
+    );
+
+    request.setRequestHeader(
+      'x-upsert',
+      'false'
+    );
+
+    request.upload.addEventListener(
+      'progress',
+      (event) => {
+        if (event.lengthComputable) {
+          onProgress(
+            Math.max(
+              1,
+              Math.min(
+                100,
+                Math.round(
+                  (event.loaded / event.total) * 100
+                )
+              )
+            )
+          );
+        }
+      }
+    );
+
+    request.addEventListener(
+      'load',
+      () => {
+        if (
+          request.status >= 200 &&
+          request.status < 300
+        ) {
+          onProgress(100);
+          resolve(storagePath);
+          return;
+        }
+
+        let message =
+          'The document could not be uploaded to cloud storage.';
+
+        try {
+          const data = JSON.parse(
+            request.responseText || '{}'
+          );
+
+          message =
+            data.message ||
+            data.error ||
+            message;
+
+        } catch {
+          if (request.responseText) {
+            message = request.responseText;
+          }
+        }
+
+        reject(new Error(message));
+      }
+    );
+
+    request.addEventListener(
+      'error',
+      () =>
+        reject(
+          new Error(
+            'The browser could not connect to Supabase Storage. Check your internet connection and try again.'
+          )
+        )
+    );
+
+    request.addEventListener(
+      'timeout',
+      () =>
+        reject(
+          new Error(
+            'The file upload timed out after 90 seconds. Check your connection or try a smaller file.'
+          )
+        )
+    );
+
+    request.addEventListener(
+      'abort',
+      () =>
+        reject(
+          new Error(
+            'The file upload was cancelled.'
+          )
+        )
+    );
+
     request.send(file);
   });
 }
 
-export async function createResource(resource, callbacks = {}) {
+export async function createResource(
+  resource,
+  callbacks = {}
+) {
   const { file, ...metadata } = resource;
+
   callbacks.onStage?.('uploading');
-  const storagePath = await uploadResourceFile(file, metadata.submittedByUid, callbacks.onProgress);
+
+  const storagePath =
+    await uploadResourceFile(
+      file,
+      metadata.submittedByUid,
+      callbacks.onProgress
+    );
+
   const createdAtMs = Date.now();
 
   try {
     callbacks.onStage?.('saving');
+
     const data = await firestoreRequest(
       `${FIRESTORE_BASE}/resources`,
       {
@@ -216,114 +433,269 @@ export async function createResource(resource, callbacks = {}) {
             storagePath,
             downloadCount: 0,
             createdAtMs,
-            createdAt: new Date(createdAtMs).toISOString()
+            createdAt:
+              new Date(createdAtMs).toISOString()
           })
         })
       },
-      { requireAuth: true, timeout: 30000 }
+      {
+        requireAuth: true,
+        timeout: 30000
+      }
     );
+
     callbacks.onStage?.('complete');
-    // Initialize every newly uploaded resource with a download counter of zero in Firestore.
-    return normalizeResource(mapFirestoreDocument(data));
+
+    return normalizeResource(
+      mapFirestoreDocument(data)
+    );
+
   } catch (error) {
-    throw new Error(`The file uploaded, but its library record could not be saved: ${error.message}`);
+    throw new Error(
+      `The file uploaded, but its library record could not be saved: ${error.message}`
+    );
   }
 }
 
-async function runResourceQuery(structuredQuery, requireAuth = false) {
+async function runResourceQuery(
+  structuredQuery,
+  requireAuth = false
+) {
   const rows = await firestoreRequest(
     `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(firebaseConfig.projectId)}/databases/default/documents:runQuery`,
     {
       method: 'POST',
-      body: JSON.stringify({ structuredQuery })
+      body: JSON.stringify({
+        structuredQuery
+      })
     },
-    { requireAuth, timeout: 30000 }
+    {
+      requireAuth,
+      timeout: 30000
+    }
   );
-  return (rows || []).filter((row) => row.document).map((row) => mapFirestoreDocument(row.document));
+
+  return (rows || [])
+    .filter((row) => row.document)
+    .map((row) =>
+      mapFirestoreDocument(row.document)
+    );
 }
 
 function resourceQuery(where) {
   const query = {
-    from: [{ collectionId: 'resources' }],
+    from: [
+      {
+        collectionId: 'resources'
+      }
+    ],
     limit: 500
   };
-  if (where) query.where = where;
+
+  if (where) {
+    query.where = where;
+  }
+
   return query;
 }
 
 function fieldEquals(fieldPath, value) {
   return {
     fieldFilter: {
-      field: { fieldPath },
+      field: {
+        fieldPath
+      },
       op: 'EQUAL',
       value: toFirestoreValue(value)
     }
   };
 }
 
-export async function fetchResources({ isAdmin = false, userId = '' } = {}) {
+export async function fetchResources({
+  isAdmin = false,
+  userId = ''
+} = {}) {
   let resources = [];
+
   if (isAdmin) {
-    resources = await runResourceQuery(resourceQuery(), true);
+    resources =
+      await runResourceQuery(
+        resourceQuery(),
+        true
+      );
+
   } else {
-    const approved = await runResourceQuery(resourceQuery(fieldEquals('status', 'approved')), false);
-    if (!userId) return approved.sort(sortNewest).map(normalizeResource);
-    const mine = await runResourceQuery(resourceQuery(fieldEquals('submittedByUid', userId)), true);
+    const approved =
+      await runResourceQuery(
+        resourceQuery(
+          fieldEquals(
+            'status',
+            'approved'
+          )
+        ),
+        false
+      );
+
+    if (!userId) {
+      return approved
+        .sort(sortNewest)
+        .map(normalizeResource);
+    }
+
+    const mine =
+      await runResourceQuery(
+        resourceQuery(
+          fieldEquals(
+            'submittedByUid',
+            userId
+          )
+        ),
+        true
+      );
+
     const merged = new Map();
-    [...approved, ...mine].forEach((item) => merged.set(item.id, item));
+
+    [...approved, ...mine].forEach(
+      (item) => {
+        merged.set(item.id, item);
+      }
+    );
+
     resources = [...merged.values()];
   }
-  return resources.sort(sortNewest).map(normalizeResource);
+
+  return resources
+    .sort(sortNewest)
+    .map(normalizeResource);
 }
 
 function sortNewest(a, b) {
-  return Number(b.createdAtMs || Date.parse(b.createdAt) || 0) - Number(a.createdAtMs || Date.parse(a.createdAt) || 0);
-}
-
-export async function saveResource(resource) {
-  const { id, createdAt, ...changes } = resource;
-  if (!id) throw new Error('The resource ID is missing.');
-  const fieldNames = Object.keys(changes).filter((key) => changes[key] !== undefined && typeof changes[key] !== 'function');
-  const mask = fieldNames.map((field) => `updateMask.fieldPaths=${encodeURIComponent(field)}`).join('&');
-  const data = await firestoreRequest(
-    `${FIRESTORE_BASE}/resources/${encodeURIComponent(String(id))}${mask ? `?${mask}` : ''}`,
-    {
-      method: 'PATCH',
-      body: JSON.stringify({ fields: toFirestoreFields(changes) })
-    },
-    { requireAuth: true, timeout: 30000 }
+  return Number(
+    b.createdAtMs ||
+    Date.parse(b.createdAt) ||
+    0
+  ) -
+  Number(
+    a.createdAtMs ||
+    Date.parse(a.createdAt) ||
+    0
   );
-  return normalizeResource(mapFirestoreDocument(data));
 }
 
-export async function incrementResourceDownloadCount(id) {
-  if (!id) throw new Error('The resource ID is missing.');
+export async function saveResource(
+  resource
+) {
+  const {
+    id,
+    createdAt,
+    ...changes
+  } = resource;
+
+  if (!id) {
+    throw new Error(
+      'The resource ID is missing.'
+    );
+  }
+
+  const fieldNames =
+    Object.keys(changes).filter(
+      (key) =>
+        changes[key] !== undefined &&
+        typeof changes[key] !== 'function'
+    );
+
+  const mask =
+    fieldNames
+      .map(
+        (field) =>
+          `updateMask.fieldPaths=${encodeURIComponent(field)}`
+      )
+      .join('&');
+
+  const data =
+    await firestoreRequest(
+      `${FIRESTORE_BASE}/resources/${encodeURIComponent(String(id))}${mask ? `?${mask}` : ''}`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify({
+          fields: toFirestoreFields(changes)
+        })
+      },
+      {
+        requireAuth: true,
+        timeout: 30000
+      }
+    );
+
+  return normalizeResource(
+    mapFirestoreDocument(data)
+  );
+}
+
+export async function removeResourceRecord(
+  id
+) {
+  if (!id) {
+    throw new Error(
+      'The resource ID is missing.'
+    );
+  }
+
+  await firestoreRequest(
+    `${FIRESTORE_BASE}/resources/${encodeURIComponent(String(id))}`,
+    {
+      method: 'DELETE'
+    },
+    {
+      requireAuth: true,
+      timeout: 30000
+    }
+  );
+
+  return true;
+}
+
+export async function incrementResourceDownloadCount(
+  id
+) {
+  if (!id) {
+    throw new Error(
+      'The resource ID is missing.'
+    );
+  }
 
   const documentName =
     `projects/${firebaseConfig.projectId}/databases/default/documents/resources/${String(id)}`;
 
   const body = JSON.stringify({
-    writes: [{
-      transform: {
-        document: documentName,
-        fieldTransforms: [
-          {
-            fieldPath: 'downloadCount',
-            increment: {
-              integerValue: '1'
+    writes: [
+      {
+        transform: {
+          document: documentName,
+          fieldTransforms: [
+            {
+              fieldPath: 'downloadCount',
+              increment: {
+                integerValue: '1'
+              }
             }
-          }
-        ]
+          ]
+        }
       }
-    }]
+    ]
   });
 
-  // If a user is signed in, firestoreRequest() automatically
-  // sends their Firebase ID token.
-  //
-  // If nobody is signed in, the request is sent without an
-  // Authorization header. Firestore rules explicitly allow
-  // anonymous visitors to increment downloadCount by exactly 1.
+  /*
+   * Logged-in users:
+   * firestoreRequest() automatically sends
+   * the Firebase ID token.
+   *
+   * Visitors:
+   * no Authorization header is sent.
+   *
+   * Firestore Security Rules determine whether
+   * the public download-count increment is allowed.
+   */
 
   await firestoreRequest(
     `${FIRESTORE_BASE}:commit`,
@@ -336,73 +708,83 @@ export async function incrementResourceDownloadCount(id) {
       timeout: 30000
     }
   );
+
+  return true;
 }
 
-  try {
-    // Ensure an anonymous auth session exists for visitors so the request
-    // appears as an authenticated (but limited) user in Firestore rules.
-    try { await signInAnonymouslyIfNeeded(); } catch (e) { /* ignore */ }
-    console.debug('incrementResourceDownloadCount: attempting auth commit', { hasUser: !!auth?.currentUser, uid: auth?.currentUser?.uid });
-    await firestoreRequest(`${FIRESTORE_BASE}:commit`, { method: 'POST', body }, { requireAuth: false, timeout: 30000 });
-    console.debug('incrementResourceDownloadCount: auth commit succeeded');
-    return;
-  } catch (error) {
-    console.warn('incrementResourceDownloadCount: auth commit failed, will try API-key fallback', error?.message || error);
-    // Try the project's API key fallback so anonymous or signed-in non-admin
-    // users can increment the download counter.
-    try {
-      const endpoint = `${FIRESTORE_BASE}:commit?key=${encodeURIComponent(firebaseConfig.apiKey)}`;
-      console.debug('incrementResourceDownloadCount: attempting API-key commit', { endpoint });
-      const controller = new AbortController();
-      const timeout = 30000;
-      const timer = setTimeout(() => controller.abort(), timeout);
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body,
-        signal: controller.signal
-      });
-      clearTimeout(timer);
-      if (!response.ok) {
-        try {
-          await readError(response, 'Firestore rejected the API-key commit request.');
-        } catch (err) {
-          console.error('incrementResourceDownloadCount: API-key commit rejected', err?.message || err);
-          throw error;
-        }
-      }
-      console.debug('incrementResourceDownloadCount: API-key commit succeeded');
-      return;
-    } catch (err) {
-      // If the fallback also fails, log and rethrow the original error for debugging.
-      console.error('incrementResourceDownloadCount: API-key commit failed', err?.message || err);
-      throw error;
-    }
-  }
-}
-
-export async function getSignedResourceUrl(storagePath, expiresIn = 900) {
+export async function getSignedResourceUrl(
+  storagePath,
+  expiresIn = 900
+) {
   requireSupabaseConfig();
-  if (!storagePath) throw new Error('This resource has no cloud file path.');
-  const path = storagePath.split('/').map(encodeURIComponent).join('/');
-  const endpoint = `${SUPABASE_URL}/storage/v1/object/sign/${encodeURIComponent(SUPABASE_BUCKET)}/${path}`;
+
+  if (!storagePath) {
+    throw new Error(
+      'This resource has no cloud file path.'
+    );
+  }
+
+  const path =
+    storagePath
+      .split('/')
+      .map(encodeURIComponent)
+      .join('/');
+
+  const endpoint =
+    `${SUPABASE_URL}/storage/v1/object/sign/${encodeURIComponent(SUPABASE_BUCKET)}/${path}`;
 
   try {
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: supabaseHeaders({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify({ expiresIn })
-    });
-    if (!response.ok) await readError(response, 'A temporary file link could not be created.');
-    const data = await response.json();
-    const signedPath = data.signedURL || data.signedUrl || data.signed_url;
-    if (!signedPath) throw new Error('Supabase did not return a signed file link.');
-    return signedPath.startsWith('http') ? signedPath : `${SUPABASE_URL}/storage/v1${signedPath}`;
-  } catch (error) {
-    const message = String(error?.message || error);
-    if (/Failed to fetch|ERR_NAME_NOT_RESOLVED|fetch/i.test(message) || /supabase/i.test(message)) {
-      throw new Error('The Supabase project URL or connection is invalid. Check the Supabase URL in supabase-config.js and make sure it matches your active project.');
+    const response = await fetch(
+      endpoint,
+      {
+        method: 'POST',
+        headers: supabaseHeaders({
+          'Content-Type': 'application/json'
+        }),
+        body: JSON.stringify({
+          expiresIn
+        })
+      }
+    );
+
+    if (!response.ok) {
+      await readError(
+        response,
+        'A temporary file link could not be created.'
+      );
     }
+
+    const data =
+      await response.json();
+
+    const signedPath =
+      data.signedURL ||
+      data.signedUrl ||
+      data.signed_url;
+
+    if (!signedPath) {
+      throw new Error(
+        'Supabase did not return a signed file link.'
+      );
+    }
+
+    return signedPath.startsWith('http')
+      ? signedPath
+      : `${SUPABASE_URL}/storage/v1${signedPath}`;
+
+  } catch (error) {
+    const message =
+      String(error?.message || error);
+
+    if (
+      /Failed to fetch|ERR_NAME_NOT_RESOLVED|fetch/i.test(message) ||
+      /supabase/i.test(message)
+    ) {
+      throw new Error(
+        'The Supabase project URL or connection is invalid. Check the Supabase URL in supabase-config.js and make sure it matches your active project.'
+      );
+    }
+
     throw error;
   }
 }
