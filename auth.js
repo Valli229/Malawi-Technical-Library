@@ -1,7 +1,7 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js';
 import {
   getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
-  signOut, onAuthStateChanged, updateProfile
+  signOut, onAuthStateChanged, updateProfile, signInAnonymously
 } from 'https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js';
 import { firebaseConfig, ADMIN_EMAILS } from './firebase-config.js';
 
@@ -12,6 +12,19 @@ if (configured) auth = getAuth(initializeApp(firebaseConfig));
 export { auth, configured };
 export const isAdmin = (user) => Boolean(user?.email && ADMIN_EMAILS.map(e => e.toLowerCase()).includes(user.email.toLowerCase()));
 export const watchAuth = (callback) => configured ? onAuthStateChanged(auth, callback) : callback(null);
+
+export async function signInAnonymouslyIfNeeded() {
+  if (!configured) return null;
+  if (auth.currentUser) return auth.currentUser;
+  try {
+    const cred = await signInAnonymously(auth);
+    return cred.user;
+  } catch (err) {
+    // If anonymous sign-in fails, return null — caller may fallback.
+    console.warn('Anonymous sign-in failed', err?.message || err);
+    return null;
+  }
+}
 export async function registerAccount(name, email, password) {
   if (!configured) throw new Error('Firebase has not been configured yet.');
   const result = await createUserWithEmailAndPassword(auth, email, password);
