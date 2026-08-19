@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | Malawi Technical Library</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" href="favicon (1).ico" type="image/x-icon">
+  </head>
+  <body data-require-auth="true">
+    <header class="site-header">
+      <div class="container navbar">
+        <a class="brand" href="index.html">
+          <span class="brand-mark">MT</span>
+          <span>Malawi Technical Library
+            <small>Learn. Practise. Succeed.</small>
+          </span>
+        </a>
+        <nav class="nav-links">
+          <a href="index.html">Home</a>
+          <a data-user-only hidden href="dashboard.html">Dashboard</a>
+          <a href="courses.html">Courses</a>
+          <a href="resources.html">Resources</a>
+          <a data-user-only hidden href="upload.html">Upload</a>
+          <a href="about.html">About</a>
+
+          <div class="mobile-auth-links" aria-label="Account actions">
+            <a class="mobile-auth-link" data-guest-only href="login.html">Log in</a>
+            <a class="mobile-auth-link mobile-auth-register" data-guest-only href="register.html">Register</a>
+            <div class="mobile-user-account" data-user-only hidden>
+              <span class="mobile-user-name" data-user-name></span>
+              <button class="mobile-logout" type="button" data-logout>Log out</button>
+            </div>
+          </div>
+        </nav>
+        <div class="nav-actions">
+          <a class="btn btn-primary" href="resources.html">Browse Library</a>
+          <a class="btn btn-outline" data-guest-only href="login.html">Log in</a>
+          <span class="account-chip" data-user-only hidden><span data-user-name></span><button class="btn btn-outline" type="button" data-logout>Log out</button></span>
+          <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false">☰</button>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="page-hero">
+        <div class="container">
+          <span class="eyebrow">Student</span>
+          <h1 id="dashboard-welcome">Welcome back</h1>
+          <p class="muted">Manage your Malawi Technical Library activity.</p>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="container dashboard-grid">
+          <div class="stats-column">
+            <div class="stats-grid" aria-hidden="false">
+              <div class="stat-card">
+                <div class="stat-value" id="stat-my-resources">—</div>
+                <div class="stat-label">My Resources</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-value" id="stat-approved">—</div>
+                <div class="stat-label">Approved</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-value" id="stat-pending">—</div>
+                <div class="stat-label">Pending</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-value" id="stat-downloads">—</div>
+                <div class="stat-label">Downloads</div>
+              </div>
+            </div>
+
+            <div class="quick-actions">
+              <a class="btn btn-outline" href="resources.html">Browse Resources</a>
+              <a class="btn btn-primary" href="upload.html">Upload Resource</a>
+            </div>
+          </div>
+
+          <div class="recent-column">
+            <h2>My Recent Uploads</h2>
+            <div id="recent-list" class="recent-list">
+              <div class="loading">Loading your uploads…</div>
+            </div>
+            <div id="empty-state" class="empty-state" style="display:none">
+              <p>You haven't uploaded any resources yet.</p>
+              <a class="btn btn-primary" href="upload.html">Upload Your First Resource</a>
+            </div>
+            <div id="dashboard-error" class="notice" style="display:none"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="footer-bottom">© <span data-year></span> Malawi Technical Library.</div>
+      </div>
+    </footer>
+
+    <script src="main.js"></script>
+    <script type="module" src="auth-ui.js"></script>
+    <script type="module" src="dashboard.js"></script>
+  </body>
+</html>
