@@ -371,7 +371,7 @@ libraryGrid?.addEventListener('click', async (event) => {
     await previewResource(resource);
   }
   if (downloadButton) {
-    const url = await createFileUrl(resource);
+  const url = await createFileUrl(resource);
     const link = document.createElement('a');
     if (url.startsWith('http')) {
       const downloadUrl = new URL(url);
@@ -385,7 +385,6 @@ libraryGrid?.addEventListener('click', async (event) => {
     link.click();
     link.remove();
     if (url.startsWith('blob:')) setTimeout(() => URL.revokeObjectURL(url), 1000);
-
     // After starting the download, increment the counter in Firestore. If it fails, allow download to continue.
     try {
       await incrementDownloadCount(resource.id);
