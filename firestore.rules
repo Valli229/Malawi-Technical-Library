@@ -26,50 +26,42 @@ service cloud.firestore {
 
       allow delete: if false;
     }
+match /resources/{resourceId} {
 
-    match /resources/{resourceId} {
-
-      // Approved resources are publicly readable.
-      // Administrators can read everything.
-      // Users can read resources they submitted.
-      allow read: if resource.data.status == "approved"
-        || isAdmin()
-        || (signedIn() && resource.data.submittedByUid == request.auth.uid);
-
-      // A signed-in user can create a resource belonging to themselves.
-      allow create: if signedIn()
-        && request.resource.data.submittedByUid == request.auth.uid
-        && (
-          request.resource.data.status == "pending"
-          || isAdmin()
-        );
-
-      // Administrators can modify resources.
-      //
-      // Everyone else, including anonymous visitors, can ONLY
-      // increase downloadCount by exactly 1 on an approved resource.
-      allow update: if isAdmin()
-  || (
+  // Anyone can read approved resources.
+  // Admins can read all resources.
+  // Users can read resources they submitted.
+  allow read: if
     resource.data.status == "approved"
-    && request.resource.data.diff(resource.data)
-        .affectedKeys()
-        .hasOnly(['downloadCount'])
-    && (
-      (
-        resource.data.downloadCount is int
-        && request.resource.data.downloadCount is int
-        && request.resource.data.downloadCount
-           == resource.data.downloadCount + 1
-      )
-      ||
-      (
-        !resource.data.keys().hasAll(['downloadCount'])
-        && request.resource.data.downloadCount == 1
-      )
-    )
-  );
+    || isAdmin()
+    || (
+      signedIn()
+      && resource.data.submittedByUid == request.auth.uid
+    );
 
-      allow delete: if isAdmin();
-    }
-  }
+  // Users can create their own pending resources.
+  allow create: if
+    signedIn()
+    && request.resource.data.submittedByUid == request.auth.uid
+    && (
+      request.resource.data.status == "pending"
+      || isAdmin()
+    );
+
+  // Admins can update anything.
+  //
+  // Normal users and visitors can ONLY change
+  // downloadCount on an approved resource.
+  allow update: if
+    isAdmin()
+    ||
+    (
+      resource.data.status == "approved"
+      &&
+      request.resource.data.diff(resource.data)
+        .affectedKeys()
+        .hasOnly(["downloadCount"])
+    );
+
+  allow delete: if isAdmin();
 }
