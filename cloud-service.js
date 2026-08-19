@@ -654,54 +654,19 @@ export async function removeResourceRecord(
 
   return true;
 }
-
-export async function incrementResourceDownloadCount(
-  id
-) {
+export async function incrementResourceDownloadCount(id) {
   if (!id) {
-    throw new Error(
-      'The resource ID is missing.'
-    );
+    throw new Error('The resource ID is missing.');
   }
 
-  const documentName =
-    `projects/${firebaseConfig.projectId}/databases/default/documents/resources/${String(id)}`;
+  const resourceUrl =
+    `${FIRESTORE_BASE}/resources/${encodeURIComponent(String(id))}`;
 
-  const body = JSON.stringify({
-    writes: [
-      {
-        transform: {
-          document: documentName,
-          fieldTransforms: [
-            {
-              fieldPath: 'downloadCount',
-              increment: {
-                integerValue: '1'
-              }
-            }
-          ]
-        }
-      }
-    ]
-  });
-
-  /*
-   * Logged-in users:
-   * firestoreRequest() automatically sends
-   * the Firebase ID token.
-   *
-   * Visitors:
-   * no Authorization header is sent.
-   *
-   * Firestore Security Rules determine whether
-   * the public download-count increment is allowed.
-   */
-
-  await firestoreRequest(
-    `${FIRESTORE_BASE}:commit`,
+  // Read the current document.
+  const current = await firestoreRequest(
+    resourceUrl,
     {
-      method: 'POST',
-      body
+      method: 'GET'
     },
     {
       requireAuth: false,
@@ -709,7 +674,43 @@ export async function incrementResourceDownloadCount(
     }
   );
 
-  return true;
+  const currentData =
+    fromFirestoreFields(current?.fields || {});
+
+  const currentCount =
+    Number(currentData.downloadCount ?? 0);
+
+  if (!Number.isFinite(currentCount) || currentCount < 0) {
+    throw new Error(
+      'The resource has an invalid downloadCount value.'
+    );
+  }
+
+  const newCount = currentCount + 1;
+
+  // Update ONLY downloadCount.
+  const updateUrl =
+    `${resourceUrl}?updateMask.fieldPaths=downloadCount`;
+
+  await firestoreRequest(
+    updateUrl,
+    {
+      method: 'PATCH',
+      body: JSON.stringify({
+        fields: {
+          downloadCount: {
+            integerValue: String(newCount)
+          }
+        }
+      })
+    },
+    {
+      requireAuth: false,
+      timeout: 30000
+    }
+  );
+
+  return newCount;
 }
 
 export async function getSignedResourceUrl(
